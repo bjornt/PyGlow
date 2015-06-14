@@ -34,7 +34,6 @@
 # Import some modules
 from smbus import SMBus
 from time import sleep
-import RPi.GPIO as rpi
 import re
 
 
@@ -101,17 +100,20 @@ GAMMA_TABLE = (
 class PyGlow:
     def __init__(
             self,
-            brightness=None, speed=None, pulse=None, pulse_dir=None):
+            brightness=None, speed=None, pulse=None, pulse_dir=None,
+            i2c_bus=None):
 
-        # Check what Raspberry Pi version we got
-        if rpi.RPI_REVISION == 1:
-            i2c_bus = 0
-        elif rpi.RPI_REVISION == 2 or rpi.RPI_REVISION == 3:
-            i2c_bus = 1
-        else:
-            raise PyGlowException(
-                self, "Unknown Raspberry Pi hardware revision: %s" %
-                (rpi.RPI_REVISION))
+        if i2c_bus is None:
+            import RPi.GPIO as rpi
+            # Check what Raspberry Pi version we got
+            if rpi.RPI_REVISION == 1:
+                i2c_bus = 0
+            elif rpi.RPI_REVISION == 2 or rpi.RPI_REVISION == 3:
+                i2c_bus = 1
+            else:
+                raise PyGlowException(
+                    self, "Unknown Raspberry Pi hardware revision: %s" %
+                    (rpi.RPI_REVISION))
 
         # Enables the LEDs
         self.bus = SMBus(i2c_bus)
