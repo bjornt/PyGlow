@@ -34,8 +34,8 @@
 # Import some modules
 from smbus import SMBus
 from time import sleep
-import RPi.GPIO as rpi
 import re
+import os
 
 
 # Define GPIO addresses
@@ -98,20 +98,16 @@ GAMMA_TABLE = (
     219, 224, 229, 234, 239, 244, 250, 255)
 
 
+
+
 class PyGlow:
     def __init__(
             self,
-            brightness=None, speed=None, pulse=None, pulse_dir=None):
+            brightness=None, speed=None, pulse=None, pulse_dir=None,
+            i2c_bus=None):
 
-        # Check what Raspberry Pi version we got
-        if rpi.RPI_REVISION == 1:
-            i2c_bus = 0
-        elif rpi.RPI_REVISION == 2 or rpi.RPI_REVISION == 3:
-            i2c_bus = 1
-        else:
-            raise PyGlowException(
-                self, "Unknown Raspberry Pi hardware revision: %s" %
-                (rpi.RPI_REVISION))
+        if i2c_bus is None:
+            i2c_bus = self.get_i2c_bus()
 
         # Enables the LEDs
         self.bus = SMBus(i2c_bus)
@@ -132,6 +128,33 @@ class PyGlow:
 
         # Define the LED state variable
         self.__STATE = {'leds': {}, 'params': {}}
+
+    def get_i2c_bus(self):
+        """Get which I2C bus will be used.
+
+        If RPi.GPIO is available, it will be used to exactly determine
+        which bus to use. If RPi.GPIO is not available, 0 is returned if
+        /dev/i2c-0 exists, otherwise 1.
+        """
+        try:
+            import RPi.GPIO as rpi
+        except ImportError:
+            # RPi.GPIO isn't available. Just get the first available I2C
+            # bus, which usually works.
+            if os.path.exists("/dev/i2c-0"):
+                return 0
+            else:
+                return 1
+        else:
+            # Check what Raspberry Pi version we got
+            if rpi.RPI_REVISION == 1:
+                return 0
+            elif rpi.RPI_REVISION == 2 or rpi.RPI_REVISION == 3:
+                return 1
+            else:
+                raise PyGlowException(
+                    self, "Unknown Raspberry Pi hardware revision: %s" %
+                    (rpi.RPI_REVISION))
 
     def led(
             self,
